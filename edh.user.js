@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Elder Driver Helper
 // @namespace    http://edh.undsf.com/
-// @version      0.2.1
+// @version      0.2.2
 // @description  源于乘客，服务乘客
 // @author       Arathi of Nebnizilla
 // @match        https://www.javbus.com/*
@@ -61,6 +61,19 @@ function updateActressInfo(name, actressInfo) {
     actressDict = _actressDict;
 }
 
+function getVideoInfo(bango) {
+    let key = "video_dict";
+    let vdict = getConfig(key, {});
+    return vdict;
+}
+
+function updateVideoInfo(bango, videoInfo) {
+    let key = "video_dict";
+    let vdict = getConfig(key, {});
+    vdict[bango] = videoInfo;
+    setConfig(key, vdict);
+}
+
 function getBackgroundColor(score) {
     let rank = (score - 6) / (10 - 6);
     let r = (rank > 0.5) ? Math.floor((rank-0.5)/0.5*15) : 0;
@@ -71,14 +84,14 @@ function getBackgroundColor(score) {
 
 function actressAvatarRender() {
     let url = window.location.href;
-    let inActressesPage = url.indexOf("actresses")>0;
-    let inSearchStarPage = url.indexOf("searchstar")>0;
+    let inActressesPage = url.indexOf("/actresses")>0;
+    let inSearchStarPage = url.indexOf("/searchstar")>0;
     let displayChineseName = getConfig("display_cn_name", true);
     let displayScore = getConfig("display_score", true);
     let coloring = getConfig("coloring", true);
 
     if (inActressesPage || inSearchStarPage) {
-        let uncensored = url.indexOf("uncensored") > 0;
+        let uncensored = url.indexOf("/uncensored") > 0;
 
         $("a.avatar-box").each(function(index, element){
             let info = element.querySelector("div.photo-info");
@@ -175,6 +188,19 @@ function actressNameRender() {
     });
 }
 
+function movieDigestRender() {
+    let inStarPage = window.location.href.indexOf("/star/") > 0;
+    let boxes = $('a.movie-box');
+    GM_log("当前页面获取影片" + boxes.length + "部");
+
+    boxes.each(function(index, element) {
+        if (element.href.indexOf(siteBaseUrl) == 0) {
+            let bango = element.href.substr(siteBaseUrl.length + 1);
+            GM_log(bango);
+        }
+    });
+}
+
 function injectMenu() {
     let html =
 `<ul class="nav navbar-nav navbar-right">
@@ -244,4 +270,7 @@ function injectMenu() {
 
     // 演员名字处理
     actressNameRender();
+
+    // 影片信息处理
+    movieDigestRender();
 })();
