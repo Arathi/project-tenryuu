@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Elder Driver Helper
 // @namespace    http://edh.undsf.com/
-// @version      0.2.2
+// @version      0.3.0
 // @description  源于乘客，服务乘客
 // @author       Arathi of Nebnizilla
 // @match        https://www.javbus.com/*
@@ -14,6 +14,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
+// @grant        GM_xmlhttpRequest
 // ==/UserScript==
 
 // 获取jQuery
@@ -50,7 +51,9 @@ function updateMetadata() {
 function getActressInfo(name) {
     let key = "actress_dict";
     let _actressDict = getConfig(key, {});
-    return _actressDict[name];
+    let actressInfo = _actressDict[name];
+    if (actressInfo == undefined) actressInfo = {};
+    return actressInfo;
 }
 
 function updateActressInfo(name, actressInfo) {
@@ -64,7 +67,9 @@ function updateActressInfo(name, actressInfo) {
 function getVideoInfo(bango) {
     let key = "video_dict";
     let vdict = getConfig(key, {});
-    return vdict;
+    let videoInfo = vdict[bango];
+    if (videoInfo == undefined) videoInfo = {};
+    return videoInfo;
 }
 
 function updateVideoInfo(bango, videoInfo) {
@@ -108,7 +113,7 @@ function actressAvatarRender() {
 
             // let buscode = actress.href;
             let actress = getActressInfo(name);
-            if (actress != undefined) {
+            if (Object.keys(actress).length > 0 && actress.score > 0) {
                 let bgcolor = getBackgroundColor(actress.score);
                 let displayName = displayChineseName ? actress.name_cn : actress.name;
                 if (displayScore) {
@@ -179,7 +184,7 @@ function actressNameRender() {
         let link = element.querySelector('a');
         let name = link.innerText;
         let actress = getActressInfo(name);
-        if (actress != undefined) {
+        if (Object.keys(actress).length > 0 && actress.score > 0) {
             let name = displayChineseName ? actress.name_cn : actress.name;
             if (displayScore) name += "(★" + actress.score + ")";
             link.innerText = name;
@@ -188,7 +193,7 @@ function actressNameRender() {
     });
 }
 
-function movieDigestRender() {
+function fetchMovieDigest() {
     let inStarPage = window.location.href.indexOf("/star/") > 0;
     let boxes = $('a.movie-box');
     GM_log("当前页面获取影片" + boxes.length + "部");
@@ -196,7 +201,65 @@ function movieDigestRender() {
     boxes.each(function(index, element) {
         if (element.href.indexOf(siteBaseUrl) == 0) {
             let bango = element.href.substr(siteBaseUrl.length + 1);
-            GM_log(bango);
+            let videoInfo = getVideoInfo(bango);
+            if (videoInfo == undefined || Object.keys(videoInfo).length == 0) {
+                GM_log("正在抓取" + bango + "信息");
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: element.href,
+                    onload: resp => {
+                        if (resp.status == 200) {
+                            // GM_log(bango + "页面抓取完成");
+                            let html = $.trim(resp.responseText);
+                            let doms = $.parseHTML(html);
+                            let container = doms.find(e=>{ return e.className == "container"});
+                            let titleNode = $('h3', container)[0];
+                            let categoryNodes = $('span.genre', container).not('span.genre[onmouseover]');
+                            let actressNodes = $('span.genre[onmouseover]', container);
+                            let videoInfo = {};
+                            videoInfo.bango = bango;
+                            videoInfo.title = titleNode.innerText.substr(bango.length+1);
+                            videoInfo.categories = [];
+                            videoInfo.actresses = [];
+                            categoryNodes.each(function(index, catNode){
+                                videoInfo.categories.push($.trim(catNode.innerText));
+                            });
+                            actressNodes.each(function(index, actNode){
+                                videoInfo.actresses.push($.trim(actNode.innerText));
+                            });
+                            updateVideoInfo(bango, videoInfo);
+                            GM_log(bango + "信息更新完成");
+                            movieDigestRender(videoInfo, element);
+                        }
+                    }
+                });
+            }
+            else {
+                GM_log("从缓存加载" + bango + "信息");
+                movieDigestRender(videoInfo, element);
+            }
+        }
+    });
+}
+
+function movieDigestRender(videoInfo, box) {
+    GM_log("渲染box");
+    let actressesInMB = false;
+    let highestScore = 0;
+    let mbActressDict = getConfig('actress_dict');
+    // let mbActressSet = new Set();
+    // Object.keys(mbActressDict).forEach(function(mba, index) {
+    //     mbActressSet.add(mba);
+    // });
+    videoInfo.actresses.forEach(function(actress, index) {
+        let name = $.trim(actress);
+        let mba = mbActressDict[name];
+        if (mba != undefined && mba.score > highestScore) {
+            actressesInMB = true;
+            highestScore = mba.score;
+        }
+        if (index >= videoInfo.actresses.length - 1 && actressesInMB) {
+            box.style.backgroundColor = getBackgroundColor(highestScore);
         }
     });
 }
@@ -272,5 +335,5 @@ function injectMenu() {
     actressNameRender();
 
     // 影片信息处理
-    movieDigestRender();
+    fetchMovieDigest();
 })();
