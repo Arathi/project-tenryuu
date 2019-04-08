@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Elder Driver Helper
 // @namespace    http://edh.undsf.com/
-// @version      0.3.0
+// @version      0.3.99.0
 // @description  源于乘客，服务乘客
 // @author       Arathi of Nebnizilla
 // @match        https://www.javbus.com/*
@@ -176,6 +176,14 @@ function actressAvatarRender() {
     }
 }
 
+function categoryRender() {
+    $("span.genre").not("span.genre[onmouseover]").each(function(index, element){
+        let link = element.querySelector('a');
+        let nodes = $.parseHTML("<a href='#'>&nbsp;<i class='glyphicon glyphicon-star-empty' style='font-size: 12px;'/></a>");
+        element.appendChild(nodes[0]);
+    });
+}
+
 function actressNameRender() {
     let displayChineseName = getConfig("display_cn_name", true);
     let displayScore = getConfig("display_score", true);
@@ -333,6 +341,9 @@ function injectMenu() {
 
     // 演员名字处理
     actressNameRender();
+
+    // 注入分类收藏标记
+    categoryRender();
 
     // 影片信息处理
     fetchMovieDigest();
