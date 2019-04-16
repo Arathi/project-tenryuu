@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Elder Driver Helper
 // @namespace    http://edh.undsf.com/
-// @version      0.3.99.6
+// @version      0.4.0
 // @description  源于乘客，服务乘客
 // @author       Arathi of Nebnizilla
 // @match        https://www.javbus.com/*
@@ -25,7 +25,6 @@ var avatarBaseUrl = "https://pics.javcdn.pw";
 var actressDict = undefined;
 
 GM_log("Elder Driver Helper v" + GM_info.script.version);
-// GM_log("jQuery版本为：" + $.fn.jquery);
 
 function getConfig(key, defaultValue) {
     let value = GM_getValue(key, defaultValue);
@@ -85,6 +84,20 @@ function resetVideoInfo() {
     setConfig(key, {});
 }
 
+function likeActress(actId, flag) {
+    let key = "like_actress";
+    let flags = getConfig(key, {});
+    flags[actId] = flag;
+    setConfig(key, flags);
+}
+
+function likeGenre(genreId, flag) {
+    let key = "like_genre";
+    let flags = getConfig(key, {});
+    flags[genreId] = flag;
+    setConfig(key, flags);
+}
+
 function getBackgroundColor(score) {
     let rank = (score - 6) / (10 - 6);
     let r = (rank > 0.5) ? Math.floor((rank-0.5)/0.5*15) : 0;
@@ -132,33 +145,6 @@ function actressAvatarRender() {
                     info.style.backgroundColor = bgcolor;
                     info.style.color = '#fff';
                 }
-
-                // let actressInfoUpdated = false;
-                // if (actress.avatar == undefined) {
-                //     if (avatar.src.indexOf(avatarBaseUrl) == 0) {
-                //         let avatarUrl = avatar.src.substr(avatarBaseUrl.length);
-                //         actress.avatar = avatarUrl;
-                //         actressInfoUpdated = true;
-                //     }
-                // }
-
-                // let actressInfoUrl = element.href;
-                // if (((inActressesPage && !uncensored) || (inSearchStarPage && true)) && actress.path == undefined) {
-                //     if (actressInfoUrl.indexOf(siteBaseUrl) == 0) {
-                //         actress.path = actressInfoUrl.substr(siteBaseUrl.length);
-                //         actressInfoUpdated = true;
-                //     }
-                // }
-                // if (((inActressesPage && uncensored) || (inSearchStarPage && false)) && actress.upath == undefined) {
-                //     if (actressInfoUrl.indexOf(siteBaseUrl) == 0) {
-                //         actress.upath = actressInfoUrl.substr(siteBaseUrl.length);
-                //         actressInfoUpdated = true;
-                //     }
-                // }
-
-                // if (actressInfoUpdated) {
-                //     updateActressInfo(actId, actress);
-                // }
             }
         });
 
@@ -184,6 +170,7 @@ function actressAvatarRender() {
 }
 
 function categoryRender() {
+    let likeGenreFlags = getConfig("like_genre", {});
     $("span.genre").not("span.genre[onmouseover]").each(function(index, element){
         let link = element.querySelector('a');
         let path = link.href.substr(siteBaseUrl.length);
@@ -191,21 +178,35 @@ function categoryRender() {
         if (path.indexOf("uncensored") >= 0) genreId = "ugenre-" + genreId;
         else genreId = "genre-" + genreId;
         let icon = "glyphicon-star-empty";
-        let nodes = $.parseHTML("<a href='#' data='" + genreId + "'>&nbsp;<i class='like-genre glyphicon " + icon + "'/></a>");
+        let liked = "";
+        if (likeGenreFlags[genreId] != undefined && likeGenreFlags[genreId] == true) {
+            icon = "glyphicon-star";
+            liked = "liked";
+        }
+        let nodes = $.parseHTML("<a href='#' data='" + genreId + "'" + liked + ">&nbsp;<i class='like-genre glyphicon " + icon + "'/></a>");
         element.appendChild(nodes[0]);
     });
     $(".like-genre").parent().click(function(eventData, handler){
         let genreId = $(this).attr('data');
-        GM_log("关注/取消关注分类：" + genreId);
-        let originClass = "glyphicon-star-empty";
-        let replaceClass = "glyphicon-star";
+        let liked = $(this).attr('liked') != undefined;
+        GM_log((liked ? "取消关注" : "关注") + "分类：" + genreId);
+        let originClass = liked ? "glyphicon-star" : "glyphicon-star-empty";
+        let replaceClass = liked ? "glyphicon-star-empty" : "glyphicon-star";
         $('.like-genre', this).removeClass(originClass).addClass(replaceClass);
+        if (liked) {
+            $(this).removeAttr('liked');
+        }
+        else {
+            $(this).attr('liked', '');
+        }
+        likeGenre(genreId, !liked);
     });
 }
 
 function actressNameRender() {
     let displayChineseName = getConfig("display_cn_name", true);
     let displayScore = getConfig("display_score", true);
+    let likeActressFlags = getConfig("like_actress", {});
 
     $("span.genre[onmouseover]").each(function(index, element){
         let actressId = $(this).attr('onmouseover').match(/\'(.*)\'/)[1];
@@ -216,15 +217,29 @@ function actressNameRender() {
             $('a[href]', this).text(name);
             $('a[href]', this).css('color', getBackgroundColor(actress.score));
         }
-        let likeNodes = $.parseHTML("<a href='#' data='" + actressId + "'><i class='like-actress glyphicon glyphicon-heart-empty'></a>");
+        let icon = "glyphicon-heart-empty";
+        let liked = "";
+        if (likeActressFlags[actressId] != undefined && likeActressFlags[actressId] == true) {
+            icon = "glyphicon-heart";
+            liked = "liked";
+        }
+        let likeNodes = $.parseHTML("<a href='#' data='" + actressId + "'" + liked + "><i class='like-actress glyphicon " + icon + "'></a>");
         element.appendChild(likeNodes[0]);
     });
     $(".like-actress").parent().click(function() {
         let actId = $(this).attr('data');
-        GM_log("关注/取消关注女优：" + actId);
-        let originClass = "glyphicon-heart-empty";
-        let replaceClass = "glyphicon-heart";
+        let liked = $(this).attr('liked') != undefined;
+        GM_log((liked ? "取消关注" : "关注") + "女优：" + actId);
+        let originClass = liked ? "glyphicon-heart" : "glyphicon-heart-empty";
+        let replaceClass = liked ? "glyphicon-heart-empty" : "glyphicon-heart";
         $('.like-actress', this).removeClass(originClass).addClass(replaceClass);
+        if (liked) {
+            $(this).removeAttr('liked');
+        }
+        else {
+            $(this).attr('liked', '');
+        }
+        likeActress(actId, !liked);
     });
 }
 
@@ -290,6 +305,11 @@ function movieDigestRender(videoInfo, box) {
     let actressesInMB = false;
     let highestScore = 0;
     let mbActressDict = getConfig('actress_dict');
+    let likedGenre = getConfig("like_genre", {});
+    let likedActress = getConfig("like_actress", {});
+
+    let frame = box.querySelector('.photo-frame');
+
     videoInfo.actresses.forEach(function(actress, index) {
         let actressId = $.trim(actress);
         let mba = mbActressDict[actressId];
@@ -299,16 +319,29 @@ function movieDigestRender(videoInfo, box) {
         }
         if (index >= videoInfo.actresses.length - 1 && actressesInMB) {
             box.style.backgroundColor = getBackgroundColor(highestScore);
-            let frame = box.querySelector('.photo-frame');
-            let triangleTopNodes = $.parseHTML("<i class='triangle-topright'/>");
-            frame.appendChild(triangleTopNodes[0]);
-            let starNodes = $.parseHTML("<i class='video-like-genre glyphicon glyphicon-star'/>");
-            frame.appendChild(starNodes[0]);
+        }
+    });
+
+    videoInfo.actresses.some(function(actress, index, array) {
+        let exists = likedActress[actress] == true;
+        if (exists) {
             let triangleBottomNodes = $.parseHTML("<i class='triangle-bottomright'/>");
             frame.appendChild(triangleBottomNodes[0]);
             let heartNodes = $.parseHTML("<i class='video-like-actress glyphicon glyphicon-heart'/>");
             frame.appendChild(heartNodes[0]);
         }
+        return exists;
+    });
+
+    videoInfo.categories.some(function(cat, index, array){
+        let exists = likedGenre[cat] == true;
+        if (exists) {
+            let triangleTopNodes = $.parseHTML("<i class='triangle-topright'/>");
+            frame.appendChild(triangleTopNodes[0]);
+            let starNodes = $.parseHTML("<i class='video-like-genre glyphicon glyphicon-star'/>");
+            frame.appendChild(starNodes[0]);
+        }
+        return exists;
     });
 }
 
