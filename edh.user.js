@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Elder Driver Helper
 // @namespace    http://edh.undsf.com/
-// @version      0.3.99.2
+// @version      0.3.99.4
 // @description  源于乘客，服务乘客
 // @author       Arathi of Nebnizilla
 // @match        https://www.javbus.com/*
@@ -355,7 +355,7 @@ function injectMenu() {
     height: 0;
     border-bottom: 30px solid #666;
     border-left: 30px solid transparent;
-    margin-top: -20px;
+    top: 200px;
     right: 10px;
 }
 .video-like-actress {
@@ -372,13 +372,7 @@ function injectMenu() {
 }
 @media screen and (max-width: 479px) {
     .triangle-bottomright {
-        position: absolute;
-        width: 0;
-        height: 0;
-        border-bottom: 30px solid #666;
-        border-left: 30px solid transparent;
-        margin-top: -30px;
-        right: 10px;
+        top: 158px;
     }
     .video-like-actress {
         top: 172px;
