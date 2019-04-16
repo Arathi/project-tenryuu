@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Elder Driver Helper
 // @namespace    http://edh.undsf.com/
-// @version      0.3.99.4
+// @version      0.3.99.5
 // @description  源于乘客，服务乘客
 // @author       Arathi of Nebnizilla
 // @match        https://www.javbus.com/*
@@ -325,6 +325,7 @@ function injectMenu() {
       <li class="mypointer"><a href="#"><input type="checkbox" id="edhconf-display-score">&nbsp;&nbsp;显示评分</a></li>
       <li class="mypointer"><a href="#"><input type="checkbox" id="edhconf-display-chinese-name">&nbsp;&nbsp;显示中文名</a></li>
       <li class="mypointer"><a href="#"><input type="checkbox" id="edhconf-coloring">&nbsp;&nbsp;名单上色</a></li>
+      <li class="mypointer"><a href="#"><input type="checkbox" id="edhconf-blur-mode">&nbsp;&nbsp;图片模糊化</a></li>
       <li class="mypointer"><a href="#" id="edh-update-metadata">重置元数据</a></li>
       <li class="mypointer"><a href="#" id="edh-reset-videoinfo">重置影片数据</a></li>
       <li class="mypointer disabled"><a href="#" id="edh-generate-masterboard">生成大师榜</a></li>
@@ -377,18 +378,28 @@ function injectMenu() {
     .video-like-actress {
         top: 172px;
     }
-}
-`;
+}`;
+    let blurCss =
+`div.photo-frame img {
+    filter: url(blur.svg#blur); /* FireFox, Chrome, Opera */
+    -webkit-filter: blur(5px); /* Chrome, Opera */
+       -moz-filter: blur(5px);
+        -ms-filter: blur(5px);
+            filter: blur(5px);
+}`;
+
     GM_addStyle(css);
     $("div#navbar").append(html);
 
     let displayScore = getConfig("display_score", true);
-    let displayChineseName = getConfig("display_cn_name", true);
+    let displayChineseName = getConfig("display_cn_name", false);
     let coloring = getConfig("coloring", true);
+    let blurMode = getConfig("blur_mode", false);
 
     $("input#edhconf-display-score").prop('checked', displayScore);
     $("input#edhconf-display-chinese-name").prop('checked', displayChineseName);
     $("input#edhconf-coloring").prop('checked', coloring);
+    $("input#edhconf-blur-mode").prop('checked', blurMode);
 
     $("input#edhconf-display-score").change(function(){
         let displayScore = $("input#edhconf-display-score").prop('checked');
@@ -405,6 +416,11 @@ function injectMenu() {
         setConfig("coloring", coloring);
     });
 
+    $("input#edhconf-blur-mode").change(function(){
+        let blurMode = $("input#edhconf-blur-mode").prop('checked');
+        setConfig("blur_mode", blurMode);
+    });
+
     $("a#edh-update-metadata").click(function(){
         updateMetadata();
     });
@@ -412,6 +428,8 @@ function injectMenu() {
     $("a#edh-reset-videoinfo").click(function() {
         resetVideoInfo();
     });
+
+    if (blurMode) GM_addStyle(blurCss);
 }
 
 (function() {
