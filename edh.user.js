@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Elder Driver Helper
 // @namespace    http://edh.undsf.com/
-// @version      0.3.99.5
+// @version      0.3.99.6
 // @description  源于乘客，服务乘客
 // @author       Arathi of Nebnizilla
 // @match        https://www.javbus.com/*
@@ -380,7 +380,7 @@ function injectMenu() {
     }
 }`;
     let blurCss =
-`div.photo-frame img {
+`div.photo-frame img, a.bigImage img {
     filter: url(blur.svg#blur); /* FireFox, Chrome, Opera */
     -webkit-filter: blur(5px); /* Chrome, Opera */
        -moz-filter: blur(5px);
@@ -432,11 +432,23 @@ function injectMenu() {
     if (blurMode) GM_addStyle(blurCss);
 }
 
+function hideAds() {
+    $('.ad-table').hide();
+    $('.ad-list').hide();
+    let h4s = $('h4[style="position:relative"]');
+    if (h4s.length == 2) {
+        h4s[0].nextElementSibling.remove();
+        h4s[0].nextElementSibling.remove();
+        h4s[1].nextElementSibling.remove();
+        h4s[0].remove();
+        h4s[1].remove();
+    }
+}
+
 (function() {
     'use strict';
     // 隐藏不堪入目的小广告
-    $('.ad-table').hide();
-    $('.ad-list').hide();
+    hideAds();
 
     // 加载大师榜
     actressDict = getConfig("actress_dict", {});
