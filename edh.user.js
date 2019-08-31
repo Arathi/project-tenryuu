@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Elder Driver Helper
 // @namespace    http://edh.undsf.com/
-// @version      0.4.0.5
+// @version      0.4.0.6
 // @description  源于乘客，服务乘客
 // @author       Arathi of Nebnizilla
 // @match        https://www.javbus.com/*
@@ -13,6 +13,9 @@
 // @match        https://www.dmmsee.icu/*
 // @match        https://www.busjav.icu/*
 // @match        https://www.busdmm.icu/*
+// @match        https://www.busjav.icu/*
+// @match        https://www.dmmsee.icu/*
+// @match        https://www.javbus.icu/*
 // @grant        GM_log
 // @grant        GM_setValue
 // @grant        GM_getValue
