@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Elder Driver Helper
 // @namespace    http://edh.undsf.com/
-// @version      0.4.1
+// @version      0.4.1.1
 // @description  源于乘客，服务乘客
 // @author       Arathi of Nebnizilla
 // @include      /^https?://www\.(javbus|seedmm|dmmbus|dmmsee|busjav|busdmm)\.(\w{2,4})/.*$/
@@ -18,6 +18,8 @@ var $ = jQuery;
 var siteBaseUrl = window.location.origin;
 var avatarBaseUrl = "https://pics.javcdn.pw";
 var actressDict = undefined;
+var likeActressNameSet = new Set();
+var likeActressEventAppend = false;
 
 GM_log("Elder Driver Helper v" + GM_info.script.version);
 
@@ -209,33 +211,40 @@ function actressNameRender() {
         if (Object.keys(actress).length > 0 && actress.score > 0) {
             let name = displayChineseName ? actress.name_cn : actress.name;
             if (displayScore) name += "(★" + actress.score + ")";
-            $('a[href]', this).text(name);
-            $('a[href]', this).css('color', getBackgroundColor(actress.score));
+            $('a[href!=#]', this).text(name);
+            $('a[href!=#]', this).css('color', getBackgroundColor(actress.score));
         }
-        let icon = "glyphicon-heart-empty";
-        let liked = "";
-        if (likeActressFlags[actressId] != undefined && likeActressFlags[actressId] == true) {
-            icon = "glyphicon-heart";
-            liked = "liked";
+        if (!likeActressNameSet.has(actressId)) {
+            let icon = "glyphicon-heart-empty";
+            let liked = "";
+            if (likeActressFlags[actressId] != undefined && likeActressFlags[actressId] == true) {
+                icon = "glyphicon-heart";
+                liked = " liked";
+            }
+            let likeNodes = $.parseHTML("<a href='#' data='" + actressId + "'" + liked + "><i class='like-actress glyphicon " + icon + "'></a>");
+            element.appendChild(likeNodes[0]);
+            likeActressNameSet.add(actressId);
         }
-        let likeNodes = $.parseHTML("<a href='#' data='" + actressId + "'" + liked + "><i class='like-actress glyphicon " + icon + "'></a>");
-        element.appendChild(likeNodes[0]);
     });
-    $(".like-actress").parent().click(function() {
-        let actId = $(this).attr('data');
-        let liked = $(this).attr('liked') != undefined;
-        GM_log((liked ? "取消关注" : "关注") + "女优：" + actId);
-        let originClass = liked ? "glyphicon-heart" : "glyphicon-heart-empty";
-        let replaceClass = liked ? "glyphicon-heart-empty" : "glyphicon-heart";
-        $('.like-actress', this).removeClass(originClass).addClass(replaceClass);
-        if (liked) {
-            $(this).removeAttr('liked');
-        }
-        else {
-            $(this).attr('liked', '');
-        }
-        likeActress(actId, !liked);
-    });
+
+    if (!likeActressEventAppend) {
+        $(".like-actress").parent().click(function() {
+            let actId = $(this).attr('data');
+            let liked = $(this).attr('liked') != undefined;
+            GM_log((liked ? "取消关注" : "关注") + "女优：" + actId);
+            let originClass = liked ? "glyphicon-heart" : "glyphicon-heart-empty";
+            let replaceClass = liked ? "glyphicon-heart-empty" : "glyphicon-heart";
+            $('.like-actress', this).removeClass(originClass).addClass(replaceClass);
+            if (liked) {
+                $(this).removeAttr('liked');
+            }
+            else {
+                $(this).attr('liked', '');
+            }
+            likeActress(actId, !liked);
+        });
+        likeActressEventAppend = true;
+    }
 }
 
 function fetchMovieDigest() {
@@ -340,6 +349,40 @@ function movieDigestRender(videoInfo, box) {
     });
 }
 
+function doDisplayScore() {
+    let displayScore = $("input#edhconf-display-score").prop('checked');
+    if (displayScore) {
+        GM_log("显示分数");
+    }
+    else {
+        GM_log("不显示分数");
+    }
+    setConfig("display_score", displayScore);
+    actressNameRender();
+}
+
+function doDisplayChineseName() {
+    let displayChineseName = $("input#edhconf-display-chinese-name").prop('checked');
+    if (displayChineseName) {
+        GM_log("显示中文名");
+    }
+    else {
+        GM_log("不显示中文名");
+    }
+    setConfig("display_cn_name", displayChineseName);
+    actressNameRender();
+}
+
+function doColoring() {
+    let coloring = $("input#edhconf-coloring").prop('checked');
+    setConfig("coloring", coloring);
+}
+
+function doBlurMode() {
+    let blurMode = $("input#edhconf-blur-mode").prop('checked');
+    setConfig("blur_mode", blurMode);
+}
+
 function injectMenu() {
     let html =
 `<ul class="nav navbar-nav navbar-right">
@@ -350,10 +393,22 @@ function injectMenu() {
       <span class="caret"></span>
     </a>
     <ul class="dropdown-menu" role="menu">
-      <li class="mypointer"><a href="#"><input type="checkbox" id="edhconf-display-score">&nbsp;&nbsp;显示评分</a></li>
-      <li class="mypointer"><a href="#"><input type="checkbox" id="edhconf-display-chinese-name">&nbsp;&nbsp;显示中文名</a></li>
-      <li class="mypointer"><a href="#"><input type="checkbox" id="edhconf-coloring">&nbsp;&nbsp;名单上色</a></li>
-      <li class="mypointer"><a href="#"><input type="checkbox" id="edhconf-blur-mode">&nbsp;&nbsp;图片模糊化</a></li>
+      <li class="mypointer"><a href="#">
+          <input type="checkbox" id="edhconf-display-score">
+          <span id="edhconf-display-score">&nbsp;&nbsp;显示评分</span>
+      </a></li>
+      <li class="mypointer"><a href="#">
+          <input type="checkbox" id="edhconf-display-chinese-name">
+          <span id="edhconf-display-chinese-name">&nbsp;&nbsp;显示中文名</span>
+      </a></li>
+      <li class="mypointer"><a href="#">
+          <input type="checkbox" id="edhconf-coloring">
+          <span id="edhconf-coloring">&nbsp;&nbsp;名单上色</span>
+      </a></li>
+      <li class="mypointer"><a href="#">
+          <input type="checkbox" id="edhconf-blur-mode">
+          <span id="edhconf-coloring">&nbsp;&nbsp;图片模糊化</span>
+      </a></li>
       <li class="mypointer"><a href="#" id="edh-update-metadata">重置元数据</a></li>
       <li class="mypointer"><a href="#" id="edh-reset-videoinfo">重置影片数据</a></li>
       <li class="mypointer disabled"><a href="#" id="edh-generate-masterboard">生成大师榜</a></li>
@@ -429,24 +484,33 @@ function injectMenu() {
     $("input#edhconf-coloring").prop('checked', coloring);
     $("input#edhconf-blur-mode").prop('checked', blurMode);
 
-    $("input#edhconf-display-score").change(function(){
+    $("input#edhconf-display-score").change(doDisplayScore);
+    $("input#edhconf-display-chinese-name").change(doDisplayChineseName);
+    $("input#edhconf-coloring").change(doColoring);
+    $("input#edhconf-blur-mode").change(doBlurMode);
+
+    $("span#edhconf-display-score").click(function(){
         let displayScore = $("input#edhconf-display-score").prop('checked');
-        setConfig("display_score", displayScore);
+        $("input#edhconf-display-score").prop('checked', !displayScore);
+        doDisplayScore();
     });
 
-    $("input#edhconf-display-chinese-name").change(function(){
+    $("span#edhconf-display-chinese-name").click(function(){
         let displayChineseName = $("input#edhconf-display-chinese-name").prop('checked');
-        setConfig("display_cn_name", displayChineseName);
+        $("input#edhconf-display-chinese-name").prop('checked', !displayChineseName);
+        doDisplayChineseName();
     });
 
-    $("input#edhconf-coloring").change(function(){
+    $("span#edhconf-coloring").click(function(){
         let coloring = $("input#edhconf-coloring").prop('checked');
-        setConfig("coloring", coloring);
+        $("input#edhconf-coloring").prop('checked', !coloring);
+        doColoring();
     });
 
-    $("input#edhconf-blur-mode").change(function(){
+    $("span#edhconf-blur-mode").click(function(){
         let blurMode = $("input#edhconf-blur-mode").prop('checked');
-        setConfig("blur_mode", blurMode);
+        $("input#edhconf-blur-mode").prop('checked', !blurMode);
+        doBlurMode();
     });
 
     $("a#edh-update-metadata").click(function(){
